@@ -1,0 +1,81 @@
+services:
+  # ───────────────────────────
+  # BACKEND
+  # ───────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: small-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    networks:
+      - small_net
+    depends_on:
+      - keycloak
+
+  # ───────────────────────────
+  # PROXY (NGINX)
+  # ───────────────────────────
+  proxy:
+    build:
+      context: ./proxy
+    container_name: small-proxy
+    ports:
+      - "80:80"
+    networks:         
+      - small_net
+    depends_on:
+      - frontend
+      - backend
+
+  # ───────────────────────────
+  # FRONTEND
+  # ───────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile.dev
+    container_name: small-frontend
+    ports:
+      - "5173:5173"
+    networks:
+      - small_net
+    depends_on:
+      - backend
+
+  # ───────────────────────────
+  # KEYCLOAK AUTH SERVER
+  # ───────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.5
+    container_name: small-keycloak
+    user: root
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./themes:/opt/keycloak/themes
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+      - keycloak_data:/opt/keycloak/data 
+    networks:
+      - small_net
+
+# ───────────────────────────
+# NETWORK
+# ───────────────────────────
+networks:
+  small_net:
+    driver: bridge
+
+
+volumes:
+  keycloak_data:
+
